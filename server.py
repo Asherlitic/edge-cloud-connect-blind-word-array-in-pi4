@@ -6,7 +6,8 @@ from fastapi.staticfiles import StaticFiles
 from collections import Counter
 
 # 引入你的云端 AI 分析模块
-from cloud_api import ocr_and_llm, extract_keywords_with_llm, classify_with_llm
+from cloud_api import ask_smart_assistant_multimodal, extract_keywords_with_llm, classify_with_llm
+import base64
 
 app = FastAPI()
 
@@ -46,22 +47,33 @@ async def receive_from_pi(file: UploadFile = File(...), text: str = Form(...)):
     
     with open(file_path, "wb") as buffer:
         buffer.write(file_content)
+           
+    # 2. 核心大脑分析：直接用多模态大模型做智慧识图（不经过OCR）
+    image_b64 = base64.b64encode(file_content).decode('utf-8')
+    ai_prompt = (
+        "请结合图片内容和用户输入，做一次完整的智能决策分析。"
+        "你的分析将显示在系统看板的「AI 决策分析」区域，请：\n"
+        "1. 先描述你从图片中看到了什么（物体、文字、场景等）\n"
+        "2. 结合用户输入的文本，做出合理推断\n"
+        "3. 给出你的决策建议或结论\n"
+        "语气专业、简洁，控制在50字以内。"
+    )
+    ai_analysis_result = ask_smart_assistant_multimodal(
+        prompt_text=f"{ai_prompt}\n\n用户输入：{text}",
+        image_base64=image_b64,
+        system_prompt="你是一个端云协同系统的AI决策分析引擎，负责看图理解并给出专业判断。",
+        model="ernie-5.0"
+    )
+    if not ai_analysis_result:
+        ai_analysis_result = "AI 分析服务暂未响应"
     
-                
-        
-        
-        
-        
-    # 2. 核心大脑分析：调用 cloud_api 里的多模态认知函数
-    ai_analysis_result, ocr_text = ocr_and_llm(file_content, text)
-    
-    # 3. AI提取关键词（从用户文本 + OCR文本中智能提取，用于词云展示）
-    keywords = extract_keywords_with_llm(text, ocr_text)
+    # 3. AI提取关键词（用AI分析文本替代OCR文本，作为关键词提取的语料）
+    keywords = extract_keywords_with_llm(text, ai_analysis_result)
     if not keywords:
-        keywords = [w for w in (text + " " + (ocr_text or "")).split() if len(w) > 1][:10]
+        keywords = [w for w in (text + " " + ai_analysis_result).split() if len(w) > 1][:10]
     
-    # 4. AI智能分类：结合关键词、用户文本、OCR文本综合判断
-    categories = classify_with_llm(text, ocr_text, keywords)
+    # 4. AI智能分类：结合关键词、用户文本、AI分析文本综合判断
+    categories = classify_with_llm(text, ai_analysis_result, keywords)
     
     # 5. 分类计数累加
     for cat in categories:
