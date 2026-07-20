@@ -67,10 +67,10 @@ async def receive_from_pi(file: UploadFile = File(...), text: str = Form(...)):
     if not ai_analysis_result:
         ai_analysis_result = "AI 分析服务暂未响应"
     
-    # 3. AI提取关键词（用AI分析文本替代OCR文本，作为关键词提取的语料）
-    keywords = extract_keywords_with_llm(text, ai_analysis_result)
+        # 3. AI提取关键词（用AI分析文本替代OCR文本，作为关键词提取的语料）
+    keywords = extract_keywords_with_llm(text, ai_analysis_result[:150])
     if not keywords:
-        keywords = [w for w in (text + " " + ai_analysis_result).split() if len(w) > 1][:10]
+        keywords = [w for w in (text + " " + ai_analysis_result[:150]).split() if len(w) > 1][:10]
     
     # 4. AI智能分类：结合关键词、用户文本、AI分析文本综合判断
     categories = classify_with_llm(text, ai_analysis_result, keywords)

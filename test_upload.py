@@ -5,7 +5,7 @@ import os
 # 建议将 URL 独立出来，方便后期改为云端地址
 #SERVER_URL = "http://127.0.0.1:8000/upload"
 SERVER_URL = "https://edge-cloud-connect-blind-word-array-in.onrender.com/upload"
-TEST_IMAGE = "a2.png" 
+TEST_IMAGE = "med.png" 
 
 def run_integration_test():
     print("🚀 开始端云协同集成测试...")

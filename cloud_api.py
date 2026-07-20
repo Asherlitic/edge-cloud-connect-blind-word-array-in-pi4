@@ -443,8 +443,8 @@ def extract_keywords_with_llm(user_text, ocr_text):
 
     result = ask_smart_assistant(
         prompt_text=prompt,
-        system_prompt="你是一个关键词提取工具。只输出用中文逗号分隔的关键词列表。",
-        model="ernie-lite"
+        system_prompt="你是一个精准的关键词提取工具。严格按照要求只输出用中文逗号分隔的短关键词（2~4字），绝对不要输出完整句子。",
+        model="ernie-5.0"
     )
     
     if not result:
