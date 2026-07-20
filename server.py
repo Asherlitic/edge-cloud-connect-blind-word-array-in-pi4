@@ -105,10 +105,11 @@ async def receive_from_pi(file: UploadFile = File(...), text: str = Form(...)):
 @app.get("/api/data")
 async def get_data():
     """
-    数据网关接口：供前端网页拉取最新统计、词云、AI状态、分类统计和历史队列
+    数据网关接口：供前端网页拉取最新统计、标签云、AI状态、分类统计和历史队列
     """
-    keyword_counts = Counter(learning_system_db["learned_keywords"]).most_common(20)
-    word_cloud_data = [{"name": word, "value": count} for word, count in keyword_counts]
+    # 标签云数据：直接从 learned_keywords 累计数组中统计
+    tag_counts = Counter(learning_system_db["learned_keywords"]).most_common(30)
+    tags = [{"name": w, "count": c} for w, c in tag_counts]
     
     # 计算各分类占比（用于前端进度条）
     stats = learning_system_db["category_stats"]
@@ -116,7 +117,7 @@ async def get_data():
     
     return {
         "image": learning_system_db["latest_capture"],
-        "words": word_cloud_data,
+        "tags": tags,
         "analysis": learning_system_db["ai_cognitive_feedback"],
         "records": learning_system_db["total_records_saved"],
         "history": learning_system_db["history_records"],
@@ -139,8 +140,6 @@ async def view_system():
     <head>
         <title>端云协同 - 智慧学习系统</title>
         <meta charset="utf-8">
-        <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
-        <script src="https://cdn.jsdelivr.net/npm/echarts-wordcloud@2.1.0/dist/echarts-wordcloud.min.js"></script>
         <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
         <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
         
@@ -239,10 +238,10 @@ async def view_system():
                 </div>
             </div>
 
-            <!-- 中栏：词云 -->
+                        <!-- 中栏：标签云 -->
             <div class="card stats-panel" id="statsCard">
                 <h2>🧠 认知词库 · 多模态特征图谱</h2>
-                <div id="wordCloud"></div>
+                <div id="tagCloud" style="min-height: 500px; display: flex; flex-wrap: wrap; align-content: flex-start; gap: 8px; padding: 10px;"></div>
             </div>
 
             <!-- 右栏：关键词分类统计 -->
@@ -278,8 +277,7 @@ async def view_system():
             </div>
         </div>
 
-        <script>
-            var chart = echarts.init(document.getElementById('wordCloud'));
+                <script>
             let lastRecordCount = 0;
 
             function toggleHistory() { 
@@ -309,6 +307,26 @@ async def view_system():
                 document.getElementById('cat-total').innerText = total;
             }
 
+            // 纯 CSS 标签云渲染函数
+            const TAG_COLORS = ['#e74c3c','#2ecc71','#f39c12','#3498db','#9b59b6','#1abc9c','#e67e22','#34495e','#16a085','#c0392b'];
+            function renderTagCloud(tags) {
+                let container = document.getElementById('tagCloud');
+                if (!tags || tags.length === 0) {
+                    container.innerHTML = '<div style="color:#aaa;text-align:center;width:100%;padding:40px 0;">暂无关键词数据</div>';
+                    return;
+                }
+                let maxCount = Math.max(...tags.map(t => t.count), 1);
+                let html = '';
+                tags.forEach(t => {
+                    let ratio = t.count / maxCount;
+                    let fontSize = 12 + Math.round(ratio * 24);  // 12px ~ 36px
+                    let color = TAG_COLORS[Math.floor(Math.random() * TAG_COLORS.length)];
+                    let opacity = 0.6 + ratio * 0.4;
+                    html += `<span style="display:inline-block;font-size:${fontSize}px;color:${color};opacity:${opacity};padding:4px 10px;margin:3px;border-radius:4px;background:#f5f6fa;border:1px solid #eee;transition:all 0.2s;cursor:default;" title="出现 ${t.count} 次">${t.name}</span>`;
+                });
+                container.innerHTML = html;
+            }
+
             async function fetchData() {
                 try {
                     let response = await fetch('/api/data');
@@ -323,14 +341,8 @@ async def view_system():
                     // 3. AI分析
                     document.getElementById('aiAnalysis').innerText = data.analysis || 'AI 分析服务暂未响应';
                     
-                    // 4. 词云
-                    chart.setOption({
-                        series: [{
-                            type: 'wordCloud', shape: 'circle', sizeRange: [14, 60], rotationRange: [-45, 45], gridSize: 8,
-                            textStyle: { color: function() { return 'rgb(' + [Math.round(Math.random() * 150), Math.round(Math.random() * 150), Math.round(Math.random() * 150)].join(',') + ')'; } },
-                            data: data.words
-                        }]
-                    });
+                                        // 4. 标签云（纯 CSS，不依赖任何第三方库）
+                    renderTagCloud(data.tags || []);
 
                     // 5. 历史记录
                     let hList = document.getElementById('historyList');
@@ -381,9 +393,8 @@ async def view_system():
                 }
             }
 
-            fetchData();
-            setInterval(fetchData, 1500); 
-            window.addEventListener('resize', function() { chart.resize(); });
+                        fetchData();
+            setInterval(fetchData, 1500);
         </script>
     </body>
     </html>
