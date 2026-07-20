@@ -17,7 +17,7 @@ def run_integration_test():
 
     # 2. 模拟树莓派采集到的数据
     # 这里我们将提问文字设为变量，模拟真实学习场景
-    user_question = "复方氨酚烷胺胶囊的适应症是什么？"
+    user_question = "你看这个是什么？"
     
     print(f"📡 [终端] 正在向云端发送数据: {TEST_IMAGE} | 识别文本: {user_question}")
 

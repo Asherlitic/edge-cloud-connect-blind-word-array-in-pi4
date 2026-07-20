@@ -107,8 +107,8 @@ async def get_data():
     """
     数据网关接口：供前端网页拉取最新统计、标签云、AI状态、分类统计和历史队列
     """
-    # 标签云数据：直接从 learned_keywords 累计数组中统计
-    tag_counts = Counter(learning_system_db["learned_keywords"]).most_common(30)
+        # 标签云数据：直接从 learned_keywords 累计数组中统计，取前15个高频词
+    tag_counts = Counter(learning_system_db["learned_keywords"]).most_common(15)
     tags = [{"name": w, "count": c} for w, c in tag_counts]
     
     # 计算各分类占比（用于前端进度条）
